@@ -1,15 +1,19 @@
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import { configVariable, defineConfig } from "hardhat/config";
 
+const solcPath = process.env.HARDHAT_SOLC_PATH;
+
 export default defineConfig({
   plugins: [hardhatToolboxViemPlugin],
   solidity: {
     profiles: {
       default: {
         version: "0.8.24",
+        path: solcPath || undefined,
       },
       production: {
         version: "0.8.24",
+        path: solcPath || undefined,
         settings: {
           optimizer: {
             enabled: true,

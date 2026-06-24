@@ -2,7 +2,7 @@
 
 ## Commit-reveal required track
 
-The required-track design uses a simple EVM-compatible privacy pattern:
+The required track uses a straightforward commit-reveal pattern that works on any EVM chain:
 
 1. A participant computes a commitment from:
    - `answer`
@@ -15,26 +15,26 @@ The required-track design uses a simple EVM-compatible privacy pattern:
 5. After the reveal deadline, the owner submits one batch judging artifact through `judgeAll(...)`.
 6. The owner finalizes exactly one winner.
 
-This design solves the workshop's main fairness issue because answers stay hidden while the submission phase is still open. It does not keep answers hidden until after judging; that stronger property belongs to the advanced track.
+This fixes the fairness problem from the workshop version because answers stay hidden while submissions are still open. It does not keep answers hidden until judging is over. That stronger privacy model belongs to the advanced track.
 
 ## Why this is enough for the required track
 
-The assignment's required flow only asks that answers stay hidden during the submission phase and that only valid revealed answers are eligible for judging. A standard commit-reveal contract satisfies both requirements on any EVM chain. To stay aligned with that wording, the required-track contract should avoid Ritual-only precompiles and treat `judgeAll(...)` as the point where one batch judging artifact is recorded on-chain.
+The required track only asks for two things: answers should stay hidden during submission, and only valid revealed answers should be eligible for judging. A standard commit-reveal contract covers both. To stay close to the wording of the assignment, the required-track contract avoids Ritual-only precompiles and treats `judgeAll(...)` as the point where one batch judging artifact is recorded on-chain.
 
 ## What `judgeAll(...)` means in the required track
 
-In this implementation, `judgeAll(uint256 bountyId, bytes calldata llmInput)` does not perform on-chain inference. Instead:
+In this implementation, `judgeAll(uint256 bountyId, bytes calldata llmInput)` does not run inference on-chain. Instead:
 
 - the owner or app gathers all revealed answers
 - one Ritual AI batch judging run is prepared from those answers together when using the Ritual workflow
 - the resulting batch artifact is passed into `judgeAll(...)`
 - the contract stores that artifact and marks the bounty as judged
 
-This keeps the contract portable across EVM chains while preserving the rule that revealed answers are judged together in one batch rather than one-by-one.
+That keeps the contract portable across EVM chains while still following the rule that submissions are judged in one batch instead of one at a time.
 
 ## Ritual-native hidden submissions comparison
 
-The advanced-track idea is stronger than commit-reveal:
+The advanced track goes further than commit-reveal:
 
 - participants would encrypt their answers for a Ritual TEE executor
 - the contract would store ciphertext or an off-chain ciphertext reference
@@ -51,7 +51,7 @@ In a Ritual-native encrypted-submission design, plaintext answers should exist o
 - inside the TEE executor during private decryption and judging
 - in the final revealed bundle after judging, if the system chooses to publish all answers
 
-Plaintext answers should not appear directly on-chain before the judging step.
+Plaintext answers should not appear on-chain before judging.
 
 ## What is on-chain vs off-chain in the advanced design
 
@@ -71,8 +71,8 @@ Off-chain:
 
 ## How batch judging works
 
-Both the required track and the advanced design should preserve one important Ritual rule: judge all submissions together in one AI request, not one request per answer. In the required track, the owner or frontend builds the Ritual AI batch judging artifact from the revealed submissions and passes it into `judgeAll(...)`. In the advanced design, the TEE would privately assemble decrypted submissions into one batch prompt before sending them to the LLM.
+Both the required track and the advanced design should keep one important Ritual rule: judge all submissions together in one AI request, not one call per answer. In the required track, the owner or frontend builds the batch judging artifact from the revealed submissions and passes it into `judgeAll(...)`. In the advanced design, the TEE would privately assemble the decrypted submissions into one batch prompt before sending them to the LLM.
 
 ## Reflection
 
-The bounty title, rubric, reward, deadlines, and final winner should be public because they define the contest rules and payout outcome. Individual answers should stay hidden during the submission phase so participants cannot copy each other before the contest closes. AI should help with ranking, scoring, and explaining which submission best matches the rubric, because that is the repetitive comparison step. A human should keep the authority to finalize the winner and payout, because AI outputs can still be wrong or poorly reasoned. In the advanced version, encrypted inputs and a revealed bundle hash are a good balance between privacy and auditability. In all versions, the system should make the rules public, the private work private until the right phase, and the final payout decision accountable to a human.
+The bounty title, rubric, reward, deadlines, and final winner should be public because they define the rules and the payout. Individual answers should stay hidden during the submission phase so participants cannot copy each other before the contest closes. AI should help with ranking, scoring, and explaining which submission matches the rubric best, because that is the repetitive comparison work. A human should still finalize the winner and payout, because AI output can be wrong or poorly reasoned. In the advanced version, encrypted inputs plus a revealed bundle hash are a reasonable balance between privacy and auditability. In every version, the rules should be public, the work should stay private until the right phase, and the final payout decision should remain accountable to a human.

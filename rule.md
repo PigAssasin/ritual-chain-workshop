@@ -1,52 +1,52 @@
-# Ritual AI Bounty Judge Homework Rules
+# Ritual AI Bounty Judge homework rules
 
-## Muc tieu cua bai tap
+## Goal
 
-Can hoan thien bai workshop thanh mot he thong bounty judge cong bang hon:
+The homework turns the workshop bounty judge into a fairer system:
 
-- Khong de nguoi choi nhin thay dap an cua nhau trong giai doan nop bai.
-- Dung flow `commit-reveal` cho phan bat buoc.
-- Chi cac bai `revealed` hop le moi duoc dua vao AI judging.
-- AI chi danh gia theo lo batch, con con nguoi van la nguoi `finalizeWinner`.
+- Participants should not see each other's answers during the submission phase.
+- The required track should use a `commit-reveal` flow.
+- Only valid revealed answers should be eligible for AI judging.
+- AI should judge submissions in one batch, while a human still calls `finalizeWinner`.
 
-## Yeu cau bat buoc phai nho
+## Core required flow
 
-Phan required track phai implement flow nay:
+The required track must implement this flow:
 
-1. Bounty owner tao bounty voi:
-   - reward
-   - submission deadline
-   - reveal deadline
-2. Trong submission phase, participant chi gui `commitment hash`.
-3. Sau submission deadline, participant tu `reveal` bang `answer + salt`.
-4. Contract verify:
+1. The bounty owner creates a bounty with:
+   - a reward
+   - a submission deadline
+   - a reveal deadline
+2. During the submission phase, each participant submits only a `commitment hash`.
+3. After the submission deadline, the participant reveals `answer + salt`.
+4. The contract verifies:
 
 ```solidity
 keccak256(abi.encodePacked(answer, salt, msg.sender, bountyId))
 ```
 
-5. Chi bai reveal hop le moi duoc AI judge.
-6. Sau reveal deadline, owner goi `judgeAll(...)`.
-7. Sau khi judge xong, owner goi `finalizeWinner(...)`.
-8. Chi 1 winner nhan reward.
+5. Only valid revealed answers are eligible for AI judging.
+6. After the reveal deadline, the owner calls `judgeAll(...)`.
+7. After judging is complete, the owner calls `finalizeWinner(...)`.
+8. Only one winner receives the reward.
 
-Ghi chu:
+Notes:
 
-- Required track la huong giai quyet bang smart contract, dung duoc tren bat ky EVM chain nao.
-- Muc tieu toi thieu cua required track la giu hidden trong submission phase.
-- Viec giu hidden cho den sau khi judging xong thuoc advanced-track thinking.
+- The required track is a smart contract solution that should work on any EVM chain.
+- The minimum privacy goal for the required track is to hide answers during the submission phase.
+- Keeping answers hidden until after judging belongs to the advanced track.
 
-## Dieu de bai muon giai quyet
+## The problem the homework is solving
 
-Workshop cu bi loi:
+The workshop version had a clear fairness issue:
 
-- User A nop dap an som.
-- Dap an hien cong khai ngay.
-- User B vao doc, copy y tuong, sua tot hon, roi nop.
+- User A submitted an answer early.
+- That answer became public immediately.
+- User B could read it, reuse the idea, improve it, and submit a stronger version.
 
-Flow moi phai giai quyet dung van de nay.
+The new flow needs to fix that.
 
-## Cac ham bat buoc nen co
+## Required Solidity functions
 
 ```solidity
 submitCommitment(uint256 bountyId, bytes32 commitment)
@@ -55,54 +55,54 @@ judgeAll(uint256 bountyId, bytes calldata llmInput)
 finalizeWinner(uint256 bountyId, uint256 winnerIndex)
 ```
 
-## Luat nghiep vu quan trong
+## Important contract rules
 
-- Chi duoc submit commitment truoc `submissionDeadline`.
-- Chi duoc reveal sau `submissionDeadline` va truoc `revealDeadline`.
-- Moi participant chi duoc 1 commitment cho moi bounty.
-- Reveal chi hop le khi hash khop commitment cu.
-- Bai khong reveal thi khong duoc dem di judge.
-- Owner chi duoc judge sau `revealDeadline`.
-- Owner chi duoc finalize sau khi judging hoan tat.
-- AI khong tu dong tra thuong. Owner van phai finalize.
+- Commitments can be submitted only before `submissionDeadline`.
+- Answers can be revealed only after `submissionDeadline` and before `revealDeadline`.
+- Each participant can submit only one commitment per bounty.
+- A reveal is valid only if the hash matches the original commitment.
+- Unrevealed submissions are not eligible for judging.
+- The owner can judge only after `revealDeadline`.
+- The owner can finalize only after judging is complete.
+- AI should not pay out automatically. The owner still finalizes the winner.
 
-## Cach hieu dung ve reveal
+## What reveal means in the required track
 
-Required track khong tu dong mo dap an.
+The required track does not reveal answers automatically.
 
-- Contract chi luu `commitment`, khong the tu suy nguoc ra answer.
-- Participant phai tu goi `revealAnswer(...)`.
-- Neu khong reveal, bai do xem nhu khong hop le de cham.
+- The contract stores only the `commitment`, not the plaintext answer.
+- A participant must explicitly call `revealAnswer(...)`.
+- If a participant never reveals, that submission is not eligible for judging.
 
-## Cong khai dap an khi nao
+## When answers become public
 
-Can phan biet 2 track:
+There are two different tracks here.
 
 ### Required track
 
-- Dap an bi an trong submission phase.
-- Dap an tro nen cong khai khi participant tu reveal trong reveal phase.
-- Sau reveal deadline moi judge.
+- Answers stay hidden during the submission phase.
+- Answers become public when participants reveal them during the reveal phase.
+- Judging happens only after the reveal deadline.
 
 ### Advanced track
 
-- Co the thiet ke de plaintext answers tiep tuc duoc an cho den sau khi AI judging xong.
-- Phan nay co the chi can viet design note, khong nhat thiet build full.
+- Plaintext answers can stay hidden until after AI judging is complete.
+- This can be presented as a design note even if it is not fully implemented.
 
-## Deliverables can co trong bai nop
+## Required deliverables
 
-Phai co it nhat:
+The submission should include at least:
 
-- Updated Solidity contract.
-- README giai thich bounty lifecycle moi.
-- Test hoac test plan cho valid va invalid reveal cases.
-- Architecture note so sanh:
+- an updated Solidity contract
+- a README that explains the new bounty lifecycle
+- a test or test plan for valid and invalid reveal cases
+- an architecture note comparing:
   - commit-reveal
   - Ritual-native hidden submissions
-- Reflection answer 5-8 cau:
+- a 5 to 8 sentence reflection answering:
   - "What should be public, what should stay hidden, and what should be decided by AI versus by a human in a bounty system?"
 
-## Tieu chi cham diem
+## Evaluation criteria
 
 - Commit-reveal correctness: 30%
 - Smart contract safety: 20%
@@ -110,35 +110,35 @@ Phai co it nhat:
 - Code clarity: 15%
 - Testing / explanation: 15%
 
-Muon diem on thi phai uu tien:
+To score well, the work should prioritize:
 
-- dung flow deadline va eligibility
-- an toan payout
-- co giai thich ro vi sao AI duoc dung theo batch
-- code de doc
-- co test hoac test plan hop ly
+- correct deadline and eligibility logic
+- safe payout handling
+- a clear explanation of why AI judging is batched
+- readable code
+- reasonable tests or a clear test plan
 
-## Advanced track can noi gi
+## What the advanced track should explain
 
-Neu lam phan nang cao, phai giai thich ro:
+If the advanced track is attempted, it should explain:
 
-- Plaintext answers ton tai o dau.
-- Cai gi luu on-chain, cai gi luu off-chain.
-- LLM nhan tat ca submissions theo batch the nao.
-- Final reveal xay ra ra sao.
-- Contract verify hoac commit bundle ket qua cuoi the nao.
+- where plaintext answers exist
+- what stays on-chain and what stays off-chain
+- how the LLM receives all submissions in one batch
+- how the final reveal happens
+- how the contract verifies or commits to the final revealed bundle
 
-Khong can nhat thiet implement full neu qua phuc tap, nhung note phai hop ly.
+It does not have to be fully implemented if that becomes too complex, but the note should still be coherent.
 
-## Rang buoc quan trong tu de bai
+## Important assignment constraints
 
-- Khong goi 1 LLM call cho tung submission trong vong lap.
-- Phai batch judge tat ca submission trong 1 request.
-- Khong reveal answer trong submission phase.
-- Khong de AI tu dong payout neu khong co giai thich ro cach parse va validate ket qua.
-- Keep required track simple.
+- Do not call the LLM once per submission inside a loop.
+- Judge all submissions together in one batch request.
+- Do not reveal answers during the submission phase.
+- Do not let AI automatically pay the winner unless the result parsing and validation are explained clearly.
+- Keep the required track simple.
 
-## Cong thuc commitment nen dung
+## Recommended commitment formula
 
 ```solidity
 bytes32 commitment = keccak256(
@@ -146,12 +146,12 @@ bytes32 commitment = keccak256(
 );
 ```
 
-Ly do them `msg.sender` va `bountyId`:
+Why include `msg.sender` and `bountyId`:
 
-- tranh nguoi khac copy commitment
-- tranh tai su dung commitment giua cac bounty
+- to stop another participant from copying a commitment
+- to stop the same commitment from being reused across bounties
 
-## Repo hien tai va cac file quan trong
+## Current repo and important files
 
 Root repo:
 
@@ -165,7 +165,7 @@ Smart contract:
 - [hardhat/hardhat.config.ts](F:\Ritual Academy\ritual-chain-workshop\hardhat\hardhat.config.ts)
 - [hardhat/package.json](F:\Ritual Academy\ritual-chain-workshop\hardhat\package.json)
 
-Frontend hien tai dang public-answer oriented, co kha nang can sua:
+The current frontend is still oriented around the public-answer workflow, so it may need updates later:
 
 - [web/src/components/SubmitAnswer.tsx](F:\Ritual Academy\ritual-chain-workshop\web\src\components\SubmitAnswer.tsx)
 - [web/src/components/SubmissionsList.tsx](F:\Ritual Academy\ritual-chain-workshop\web\src\components\SubmissionsList.tsx)
@@ -179,9 +179,9 @@ Frontend hien tai dang public-answer oriented, co kha nang can sua:
 - [web/src/lib/ritualLlm.ts](F:\Ritual Academy\ritual-chain-workshop\web\src\lib\ritualLlm.ts)
 - [web/src/abi/AIJudge.ts](F:\Ritual Academy\ritual-chain-workshop\web\src\abi\AIJudge.ts)
 
-## Tinh trang code hien tai
+## Current code status
 
-Contract required-track hien tai da duoc doi sang flow commit-reveal:
+The required-track contract has already been moved to a commit-reveal flow:
 
 - `createBounty(title, rubric, submissionDeadline, revealDeadline)`
 - `submitCommitment(bountyId, commitment)`
@@ -189,88 +189,88 @@ Contract required-track hien tai da duoc doi sang flow commit-reveal:
 - `judgeAll(bountyId, llmInput)`
 - `finalizeWinner(bountyId, winnerIndex)`
 
-`judgeAll(...)` trong required track dang la diem ghi nhan batch judging artifact len on-chain theo cach thuần EVM, khong phu thuoc Ritual-only precompile.
+In the required track, `judgeAll(...)` records a batch judging artifact on-chain in an EVM-generic way instead of depending on a Ritual-only precompile.
 
-## Huong sua hop ly
+## Implementation order that made sense
 
-Khi bat dau implement, uu tien suy nghi theo thu tu nay:
+When implementing the homework, this order was the most practical:
 
-1. Sua struct `Bounty` de co:
-   - submission deadline
-   - reveal deadline
+1. Update the `Bounty` struct to include:
+   - a submission deadline
+   - a reveal deadline
    - commitment storage
-   - revealed submissions storage
-2. Thay `submitAnswer` bang `submitCommitment`.
-3. Them `revealAnswer`.
-4. Gioi han dung phase cho tung action.
-5. Chi gom cac bai reveal hop le khi build batch judging artifact cho `judgeAll`.
-6. Validate `winnerIndex` dua tren danh sach da duoc judge.
-7. Cap nhat ABI + frontend neu muon demo giao dien.
+   - revealed submission storage
+2. Replace `submitAnswer` with `submitCommitment`.
+3. Add `revealAnswer`.
+4. Enforce the correct phase for each action.
+5. Build the `judgeAll` batch artifact only from valid revealed submissions.
+6. Validate `winnerIndex` against the judged submission list.
+7. Update the ABI and frontend later if a UI demo is needed.
 
-## Cac test nen co
+## Tests worth covering
 
-It nhat phai cover:
+At minimum, the tests should cover:
 
-- submit commitment hop le truoc deadline
-- submit commitment sau deadline bi revert
-- reveal dung answer + salt thi pass
-- reveal sai answer hoac sai salt thi revert
-- reveal truoc submission deadline bi revert
-- reveal sau reveal deadline bi revert
-- bai khong reveal khong duoc tinh vao judge
-- judge truoc reveal deadline bi revert
-- finalize truoc khi judge xong bi revert
-- chi 1 winner nhan thuong
+- valid commitment submission before the deadline
+- submission after the deadline reverting
+- valid reveal with the correct answer and salt
+- invalid reveal with the wrong answer or salt reverting
+- reveal before submission deadline reverting
+- reveal after reveal deadline reverting
+- unrevealed submissions being excluded from judging
+- judging before the reveal deadline reverting
+- finalizing before judging reverting
+- only one winner receiving the reward
 
-## Noi dung de dien form submission
+## What to prepare for the submission form
 
-Khi nop form "Proof of Building - Step 1", can chuan bi:
+For the "Proof of Building - Step 1" form, prepare:
 
-- GitHub Fork URL:
-  - link repo fork cua ban co chua code bai lam
-- Deployed Contract Address:
-  - dia chi contract sau khi deploy
-- Deploy Transaction Hash:
-  - tx hash cua lan deploy
-- A step you struggled with:
-  - mo ta ngan kho khan that su gap phai
-  - vi du:
-    - phase logic giua submit/reveal/judge
+- GitHub Fork URL
+  - the fork containing the homework code
+- Deployed Contract Address
+  - the deployed contract address
+- Deploy Transaction Hash
+  - the deployment transaction hash
+- A step you struggled with
+  - a short honest description of a real difficulty
+  - for example:
+    - phase logic between submit, reveal, and judge
     - commitment hashing
-    - chi judge cac bai da reveal
-    - batch LLM request thay vi mot call moi bai
+    - judging only revealed submissions
+    - using one batch LLM request instead of one call per answer
 
-## Reflection can nho de tra loi
+## Reflection guidance
 
-Reflection khong phai noi ve code thuan tuy, ma ve thiet ke he thong:
+The reflection should focus on system design, not just code:
 
-- Cai gi nen public
-- Cai gi nen hidden
-- Cai gi de AI quyet
-- Cai gi con nguoi phai giu quyen quyet dinh
+- what should be public
+- what should stay hidden
+- what AI should decide
+- what a human should keep control over
 
-Huong an toan:
+A safe answer usually looks like this:
 
-- rubric, deadlines, reward, winner nen public
-- dap an nen hidden trong submission phase
-- AI nen danh gia, ranking, tom tat
-- human owner nen finalize payout
+- rubric, deadlines, reward, and winner should be public
+- answers should stay hidden during the submission phase
+- AI should help with scoring, ranking, and summary reasoning
+- the human owner should finalize the payout
 
-## Cach lam viec tu nay ve sau
+## Working rules for future changes
 
-Truoc moi thay doi lon, doc lai file nay va tu check:
+Before any major edit, check all of these:
 
-1. Sua nay co vi pham commit-reveal flow khong?
-2. Co lam lo plaintext answer qua som khong?
-3. Co batch judging dung 1 request khong?
-4. Co giu owner la nguoi finalize cuoi cung khong?
-5. Co can cap nhat README, tests, architecture note, ABI, frontend khong?
+1. Does this change still follow the commit-reveal flow?
+2. Does it leak plaintext answers too early?
+3. Does it keep judging in one batch request?
+4. Does it keep the owner responsible for the final payout decision?
+5. Does it require updates to the README, tests, architecture note, ABI, or frontend?
 
-## Nguon thong tin da co
+## Source material
 
-- PDF bai tap:
+- Homework PDF:
   - `F:\Ritual Academy\Ritual_AI_Bounty_Judge_Homework.pdf`
-- Repo workshop:
+- Workshop repo:
   - `F:\Ritual Academy\ritual-chain-workshop`
 
-Neu co mau thuan giua code hien tai va de bai, uu tien de bai.
+If the code and the assignment ever conflict, the assignment should win.

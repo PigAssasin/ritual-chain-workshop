@@ -105,6 +105,38 @@ contract AIJudgeTest is Test {
         judge.revealAnswer(bountyId, answer, bytes32("wrong-salt"));
     }
 
+    function test_RevealFromDifferentSenderReverts() public {
+        uint256 bountyId = _createBounty();
+        string memory answer = "Ritual answer";
+        bytes32 salt = bytes32("right-salt");
+
+        vm.prank(alice);
+        judge.submitCommitment(bountyId, _commitment(answer, salt, alice, bountyId));
+
+        vm.warp(_submissionDeadline());
+
+        vm.prank(bob);
+        vm.expectRevert("no commitment");
+        judge.revealAnswer(bountyId, answer, salt);
+    }
+
+    function test_ParticipantCannotRevealTwice() public {
+        uint256 bountyId = _createBounty();
+        string memory answer = "Ritual answer";
+        bytes32 salt = bytes32("right-salt");
+
+        vm.prank(alice);
+        judge.submitCommitment(bountyId, _commitment(answer, salt, alice, bountyId));
+
+        vm.warp(_submissionDeadline());
+
+        vm.startPrank(alice);
+        judge.revealAnswer(bountyId, answer, salt);
+        vm.expectRevert("already revealed");
+        judge.revealAnswer(bountyId, answer, salt);
+        vm.stopPrank();
+    }
+
     function test_RevealBeforeSubmissionDeadlineReverts() public {
         uint256 bountyId = _createBounty();
         string memory answer = "Ritual answer";
@@ -158,14 +190,14 @@ contract AIJudgeTest is Test {
         judge.revealAnswer(bountyId, aliceAnswer, aliceSalt);
 
         vm.warp(_revealDeadline());
-        _mockJudgeSuccess("review");
 
         vm.prank(owner);
-        judge.judgeAll(bountyId, hex"1234");
+        judge.judgeAll(bountyId, bytes("batch-review"));
 
         AIJudge.BountyView memory bounty = judge.getBounty(bountyId);
         assertTrue(bounty.judged);
         assertEq(bounty.revealedSubmissionCount, 1);
+        assertEq(bounty.aiReview, bytes("batch-review"));
 
         vm.expectRevert("invalid index");
         judge.getSubmission(bountyId, 1);
@@ -184,11 +216,39 @@ contract AIJudgeTest is Test {
         vm.prank(alice);
         judge.revealAnswer(bountyId, answer, salt);
 
-        _mockJudgeSuccess("review");
-
         vm.prank(owner);
         vm.expectRevert("reveal ongoing");
-        judge.judgeAll(bountyId, hex"1234");
+        judge.judgeAll(bountyId, bytes("batch-review"));
+    }
+
+    function test_NonOwnerCannotJudge() public {
+        uint256 bountyId = _createBounty();
+        string memory answer = "Alice answer";
+        bytes32 salt = bytes32("alice-salt");
+
+        vm.prank(alice);
+        judge.submitCommitment(bountyId, _commitment(answer, salt, alice, bountyId));
+
+        vm.warp(_submissionDeadline());
+
+        vm.prank(alice);
+        judge.revealAnswer(bountyId, answer, salt);
+
+        vm.warp(_revealDeadline());
+
+        vm.prank(alice);
+        vm.expectRevert("not bounty owner");
+        judge.judgeAll(bountyId, bytes("batch-review"));
+    }
+
+    function test_JudgeWithoutRevealedSubmissionsReverts() public {
+        uint256 bountyId = _createBounty();
+
+        vm.warp(_revealDeadline());
+
+        vm.prank(owner);
+        vm.expectRevert("no revealed submissions");
+        judge.judgeAll(bountyId, bytes("batch-review"));
     }
 
     function test_FinalizeBeforeJudgingReverts() public {
@@ -197,6 +257,52 @@ contract AIJudgeTest is Test {
         vm.prank(owner);
         vm.expectRevert("not judged yet");
         judge.finalizeWinner(bountyId, 0);
+    }
+
+    function test_NonOwnerCannotFinalize() public {
+        uint256 bountyId = _createBounty();
+        string memory answer = "Winning answer";
+        bytes32 salt = bytes32("winner-salt");
+
+        vm.prank(alice);
+        judge.submitCommitment(bountyId, _commitment(answer, salt, alice, bountyId));
+
+        vm.warp(_submissionDeadline());
+
+        vm.prank(alice);
+        judge.revealAnswer(bountyId, answer, salt);
+
+        vm.warp(_revealDeadline());
+
+        vm.prank(owner);
+        judge.judgeAll(bountyId, bytes("batch-review"));
+
+        vm.prank(alice);
+        vm.expectRevert("not bounty owner");
+        judge.finalizeWinner(bountyId, 0);
+    }
+
+    function test_FinalizeWithInvalidWinnerIndexReverts() public {
+        uint256 bountyId = _createBounty();
+        string memory answer = "Winning answer";
+        bytes32 salt = bytes32("winner-salt");
+
+        vm.prank(alice);
+        judge.submitCommitment(bountyId, _commitment(answer, salt, alice, bountyId));
+
+        vm.warp(_submissionDeadline());
+
+        vm.prank(alice);
+        judge.revealAnswer(bountyId, answer, salt);
+
+        vm.warp(_revealDeadline());
+
+        vm.prank(owner);
+        judge.judgeAll(bountyId, bytes("batch-review"));
+
+        vm.prank(owner);
+        vm.expectRevert("invalid winner index");
+        judge.finalizeWinner(bountyId, 1);
     }
 
     function test_FinalizePaysChosenRevealedWinner() public {
@@ -213,10 +319,9 @@ contract AIJudgeTest is Test {
         judge.revealAnswer(bountyId, answer, salt);
 
         vm.warp(_revealDeadline());
-        _mockJudgeSuccess("review");
 
         vm.prank(owner);
-        judge.judgeAll(bountyId, hex"1234");
+        judge.judgeAll(bountyId, bytes("batch-review"));
 
         uint256 aliceBalanceBefore = alice.balance;
 
@@ -244,6 +349,26 @@ contract AIJudgeTest is Test {
         return START_TIME + 200;
     }
 
+    function test_JudgeAllWithoutBatchArtifactReverts() public {
+        uint256 bountyId = _createBounty();
+        string memory answer = "Alice answer";
+        bytes32 salt = bytes32("alice-salt");
+
+        vm.prank(alice);
+        judge.submitCommitment(bountyId, _commitment(answer, salt, alice, bountyId));
+
+        vm.warp(_submissionDeadline());
+
+        vm.prank(alice);
+        judge.revealAnswer(bountyId, answer, salt);
+
+        vm.warp(_revealDeadline());
+
+        vm.prank(owner);
+        vm.expectRevert("llm input required");
+        judge.judgeAll(bountyId, bytes(""));
+    }
+
     function _commitment(
         string memory answer,
         bytes32 salt,
@@ -251,19 +376,5 @@ contract AIJudgeTest is Test {
         uint256 bountyId
     ) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(answer, salt, submitter, bountyId));
-    }
-
-    function _mockJudgeSuccess(string memory review) internal {
-        bytes memory completion = bytes(review);
-        bytes memory actualOutput = abi.encode(
-            false,
-            completion,
-            bytes(""),
-            "",
-            AIJudge.ConvoHistory("", "", "")
-        );
-        bytes memory rawOutput = abi.encode(bytes(""), actualOutput);
-
-        vm.mockCall(address(0x0802), "", rawOutput);
     }
 }

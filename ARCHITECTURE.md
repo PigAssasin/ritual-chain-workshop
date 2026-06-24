@@ -12,14 +12,25 @@ The required-track design uses a simple EVM-compatible privacy pattern:
 2. The participant submits only the commitment during the submission phase.
 3. After the submission deadline, the participant reveals `answer + salt`.
 4. The contract verifies the reveal and stores only valid revealed answers as judgeable submissions.
-5. After the reveal deadline, the owner triggers one Ritual LLM batch judging request.
+5. After the reveal deadline, the owner submits one batch judging artifact through `judgeAll(...)`.
 6. The owner finalizes exactly one winner.
 
 This design solves the workshop's main fairness issue because answers stay hidden while the submission phase is still open. It does not keep answers hidden until after judging; that stronger property belongs to the advanced track.
 
 ## Why this is enough for the required track
 
-The assignment's required flow only asks that answers stay hidden during the submission phase and that only valid revealed answers are eligible for judging. A standard commit-reveal contract satisfies both requirements on any EVM chain without introducing additional off-chain trust assumptions.
+The assignment's required flow only asks that answers stay hidden during the submission phase and that only valid revealed answers are eligible for judging. A standard commit-reveal contract satisfies both requirements on any EVM chain. To stay aligned with that wording, the required-track contract should avoid Ritual-only precompiles and treat `judgeAll(...)` as the point where one batch judging artifact is recorded on-chain.
+
+## What `judgeAll(...)` means in the required track
+
+In this implementation, `judgeAll(uint256 bountyId, bytes calldata llmInput)` does not perform on-chain inference. Instead:
+
+- the owner or app gathers all revealed answers
+- one Ritual AI batch judging run is prepared from those answers together when using the Ritual workflow
+- the resulting batch artifact is passed into `judgeAll(...)`
+- the contract stores that artifact and marks the bounty as judged
+
+This keeps the contract portable across EVM chains while preserving the rule that revealed answers are judged together in one batch rather than one-by-one.
 
 ## Ritual-native hidden submissions comparison
 
@@ -60,7 +71,7 @@ Off-chain:
 
 ## How batch judging works
 
-Both the required track and the advanced design should preserve one important Ritual rule: judge all submissions together in one AI request, not one request per answer. In the required track, the owner/front-end builds the LLM input from the revealed submissions. In the advanced design, the TEE would privately assemble decrypted submissions into one batch prompt before sending them to the LLM.
+Both the required track and the advanced design should preserve one important Ritual rule: judge all submissions together in one AI request, not one request per answer. In the required track, the owner or frontend builds the Ritual AI batch judging artifact from the revealed submissions and passes it into `judgeAll(...)`. In the advanced design, the TEE would privately assemble decrypted submissions into one batch prompt before sending them to the LLM.
 
 ## Reflection
 

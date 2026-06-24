@@ -1,6 +1,6 @@
 # Privacy-Preserving AI Bounty Judge
 
-This repository updates the Ritual workshop bounty judge from a public-answer submission flow to a required homework-compliant `commit-reveal` flow.
+This repository updates the Ritual workshop bounty judge from a public-answer submission flow to a homework-compliant `commit-reveal` flow that stays portable across EVM chains.
 
 ## What changed from the workshop baseline
 
@@ -12,7 +12,7 @@ This homework version replaces that weakness with a two-phase flow:
 2. During the reveal phase, they reveal their plaintext answer and salt.
 3. The contract verifies the reveal against the original commitment.
 4. Only valid revealed answers are eligible for AI judging.
-5. After the reveal deadline, the bounty owner calls `judgeAll(...)`.
+5. After the reveal deadline, the bounty owner calls `judgeAll(...)` with one batch judging artifact.
 6. The owner still chooses the final winner with `finalizeWinner(...)`.
 
 ## Contract lifecycle
@@ -63,7 +63,7 @@ After the reveal deadline, the bounty owner calls:
 judgeAll(uint256 bountyId, bytes calldata llmInput)
 ```
 
-This preserves the Ritual workshop pattern of sending a single batch LLM request through the Ritual LLM precompile. The AI review is advisory only.
+In the required track, `llmInput` is treated as an opaque batch judging artifact produced from all revealed submissions together. In a Ritual deployment, that artifact is produced by one Ritual AI batch judging run; on a generic EVM chain, it can be an encoded prompt/result pair or a content-addressed reference to the batch judging record. The contract stores it and marks the bounty as judged without depending on any Ritual-only precompile, so the commit-reveal flow stays deployable on any EVM chain.
 
 ### 5. Finalize winner
 
@@ -78,7 +78,6 @@ The reward is paid to exactly one revealed submission. The owner remains the hum
 ## Files that matter for the homework
 
 - `hardhat/contracts/AIJudge.sol`
-- `hardhat/contracts/utils/PrecompileConsumer.sol`
 - `hardhat/test/AIJudge.t.sol`
 - `ARCHITECTURE.md`
 - `rule.md`
@@ -95,8 +94,12 @@ The Solidity test suite covers the required reveal-focused cases:
 - invalid reveal
 - reveal before and after the allowed window
 - unrevealed submissions excluded from judging
+- non-owner judging and finalization rejected
+- judging with no revealed submissions rejected
 - judging before the reveal deadline
+- empty judging artifact rejected
 - finalization before judging
+- invalid winner index rejected
 - successful payout to the chosen revealed winner
 
 ## How to run
@@ -120,13 +123,13 @@ before running the commands above.
 
 ## How to deploy
 
-From `hardhat/`, set a funded Ritual deployer key:
+From `hardhat/`, set a funded deployer key:
 
 ```bash
 DEPLOYER_PRIVATE_KEY=0x...
 ```
 
-Then deploy with:
+Then deploy with your target EVM network. Example for Ritual:
 
 ```bash
 pnpm hardhat ignition deploy --network ritual ignition/modules/AIJudge.ts
@@ -142,5 +145,6 @@ Those two values are required for the submission form.
 ## Notes
 
 - This implementation stays close to the assignment scope and does not add the full advanced encrypted-submission flow.
-- The Ritual-specific judging flow is preserved as a single batch LLM request.
+- The required-track contract is intentionally EVM-generic and does not rely on Ritual-only precompiles.
+- Ritual-specific hidden submissions remain an advanced design topic documented separately in `ARCHITECTURE.md`.
 - The current deliverable focus is the contract, tests, and design notes. The workshop frontend can be updated later if needed to match the new ABI.

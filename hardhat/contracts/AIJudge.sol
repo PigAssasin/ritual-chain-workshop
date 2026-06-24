@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {PrecompileConsumer} from "./utils/PrecompileConsumer.sol";
-
-contract AIJudge is PrecompileConsumer {
+contract AIJudge {
     uint256 public constant MAX_SUBMISSIONS = 10;
     uint256 public constant MAX_ANSWER_LENGTH = 2_000;
     uint256 public constant NO_WINNER = type(uint256).max;
@@ -49,12 +47,6 @@ contract AIJudge is PrecompileConsumer {
         uint256 revealedSubmissionCount;
         uint256 winnerIndex;
         bytes aiReview;
-    }
-
-    struct ConvoHistory {
-        string storageType;
-        string path;
-        string secretsName;
     }
 
     mapping(uint256 => Bounty) private bounties;
@@ -240,26 +232,12 @@ contract AIJudge is PrecompileConsumer {
             bounty.revealedSubmissions.length > 0,
             "no revealed submissions"
         );
-
-        bytes memory output = _executePrecompile(
-            LLM_INFERENCE_PRECOMPILE,
-            llmInput
-        );
-
-        (
-            bool hasError,
-            bytes memory completionData,
-            ,
-            string memory errorMessage,
-
-        ) = abi.decode(output, (bool, bytes, bytes, string, ConvoHistory));
-
-        require(!hasError, errorMessage);
+        require(llmInput.length > 0, "llm input required");
 
         bounty.judged = true;
-        bounty.aiReview = completionData;
+        bounty.aiReview = llmInput;
 
-        emit AllAnswersJudged(bountyId, completionData);
+        emit AllAnswersJudged(bountyId, llmInput);
     }
 
     function finalizeWinner(

@@ -13,7 +13,7 @@ In scope:
 - Update the Solidity contract to the required `commit-reveal` flow.
 - Add tests for reveal validity and deadline rules.
 - Update submission docs to satisfy the assignment deliverables.
-- Keep Ritual AI batch judging and human finalization.
+- Keep batch AI judging and human finalization.
 
 Out of scope for the first pass:
 
@@ -32,9 +32,9 @@ The X live session confirms the workshop baseline and how much of it we should p
   - `finalizeWinner`
 - The homework is specifically about evolving that baseline into `commit-reveal`, not inventing a brand-new product.
 - Ritual-specific logic is mainly in the contract side, not the frontend side.
-- `judgeAll` should keep using one Ritual LLM batch call, not one call per submission.
+- `judgeAll` should keep using one batch judging flow, not one call per submission.
 - The owner should remain the human in the loop for final payout selection.
-- The existing `PrecompileConsumer.sol`, `ConvoHistory`, and RitualWallet funding flow are part of the intended workshop structure and should be preserved unless the homework directly requires a change.
+- The repo started with Ritual-specific judging pieces, but the required track still needs to satisfy the wording `works on any EVM chain`.
 
 ## Checkpoint 0 - Baseline and source of truth
 
@@ -54,7 +54,6 @@ Exit criteria:
 Files:
 
 - `hardhat/contracts/AIJudge.sol`
-- `hardhat/contracts/utils/PrecompileConsumer.sol`
 
 Design decisions to lock before coding:
 
@@ -65,10 +64,10 @@ Design decisions to lock before coding:
 - [x] `judgeAll` must be callable only by the bounty owner after `revealDeadline`.
 - [x] `finalizeWinner` must pay exactly one winner from the revealed-and-judged set.
 - [x] Keep the implementation simple and readable, with no advanced-track features mixed into the required path.
-- [x] Preserve the Ritual workshop pieces that the live session already established:
-  - batch LLM judging via the existing precompile path
-  - `ConvoHistory` decode compatibility
+- [x] Keep only the workshop pieces that still fit the homework wording:
+  - one batch judging step
   - human-in-the-loop finalization
+  - no advanced encrypted-submission logic in the required track
 
 Suggested storage shape:
 
@@ -115,7 +114,7 @@ Tests to write before or alongside the contract change:
 Testing notes:
 
 - Use Solidity unit tests first because the behavior is contract-centric.
-- Mock the Ritual LLM precompile response for the `judgeAll` happy path.
+- Treat `judgeAll` as the required-track batch judging checkpoint and test the stored artifact directly.
 - Keep tests narrow and explicit rather than building a large fixture system.
 
 Exit criteria:
@@ -141,6 +140,7 @@ Implementation checklist:
 - [x] Restrict `finalizeWinner` to the judged state
 - [x] Validate `winnerIndex` against the revealed submission count
 - [x] Preserve batch judging via one `llmInput` request
+- [x] Keep `judgeAll` EVM-generic with no Ritual-only dependency
 - [x] Keep payout logic safe with checks-effects-interactions ordering
 
 Exit criteria:

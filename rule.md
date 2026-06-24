@@ -161,7 +161,6 @@ Root repo:
 Smart contract:
 
 - [hardhat/contracts/AIJudge.sol](F:\Ritual Academy\ritual-chain-workshop\hardhat\contracts\AIJudge.sol)
-- [hardhat/contracts/utils/PrecompileConsumer.sol](F:\Ritual Academy\ritual-chain-workshop\hardhat\contracts\utils\PrecompileConsumer.sol)
 - [hardhat/ignition/modules/AIJudge.ts](F:\Ritual Academy\ritual-chain-workshop\hardhat\ignition\modules\AIJudge.ts)
 - [hardhat/hardhat.config.ts](F:\Ritual Academy\ritual-chain-workshop\hardhat\hardhat.config.ts)
 - [hardhat/package.json](F:\Ritual Academy\ritual-chain-workshop\hardhat\package.json)
@@ -180,17 +179,17 @@ Frontend hien tai dang public-answer oriented, co kha nang can sua:
 - [web/src/lib/ritualLlm.ts](F:\Ritual Academy\ritual-chain-workshop\web\src\lib\ritualLlm.ts)
 - [web/src/abi/AIJudge.ts](F:\Ritual Academy\ritual-chain-workshop\web\src\abi\AIJudge.ts)
 
-## Tinh trang code hien tai truoc khi sua
+## Tinh trang code hien tai
 
-Contract hien tai dang theo flow cu:
+Contract required-track hien tai da duoc doi sang flow commit-reveal:
 
-- `createBounty(title, rubric, deadline)`
-- `submitAnswer(bountyId, answer)`
+- `createBounty(title, rubric, submissionDeadline, revealDeadline)`
+- `submitCommitment(bountyId, commitment)`
+- `revealAnswer(bountyId, answer, salt)`
 - `judgeAll(bountyId, llmInput)`
 - `finalizeWinner(bountyId, winnerIndex)`
-- `getSubmission(...)` hien dang tra ve plaintext answer
 
-Nghia la contract hien tai chua dung commit-reveal.
+`judgeAll(...)` trong required track dang la diem ghi nhan batch judging artifact len on-chain theo cach thuần EVM, khong phu thuoc Ritual-only precompile.
 
 ## Huong sua hop ly
 
@@ -204,7 +203,7 @@ Khi bat dau implement, uu tien suy nghi theo thu tu nay:
 2. Thay `submitAnswer` bang `submitCommitment`.
 3. Them `revealAnswer`.
 4. Gioi han dung phase cho tung action.
-5. Chi gom cac bai reveal hop le khi build input cho `judgeAll`.
+5. Chi gom cac bai reveal hop le khi build batch judging artifact cho `judgeAll`.
 6. Validate `winnerIndex` dua tren danh sach da duoc judge.
 7. Cap nhat ABI + frontend neu muon demo giao dien.
 
